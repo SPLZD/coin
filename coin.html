@@ -45,6 +45,7 @@ button{cursor:pointer}
 .conn{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
 .conn i{width:6px;height:6px;border-radius:50%;background:var(--dim)}
 .conn.live i{background:#34d399;box-shadow:0 0 8px #34d399}.conn.sim i{background:var(--violet)}
+.mark.hold{animation:hold 1.5s linear forwards}@keyframes hold{to{filter:drop-shadow(0 0 10px rgba(155,107,255,.9))}}
 .adminbtn{border:1px solid var(--violet);background:var(--glow);color:var(--violet2);font-size:11px;font-weight:600;letter-spacing:.08em;padding:4px 9px;border-radius:99px}
 
 main{position:relative;z-index:1;padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
@@ -660,13 +661,19 @@ function sheet(html){var r=$("sheetRoot");r.innerHTML='<div class="scrim" id="sc
 function closeSheet(){$("sheetRoot").innerHTML=""}
 
 /* ===== 비밀 관리자 모드 : 로고 5번 연속 탭 → PIN ===== */
-/* 로고를 2초 꾹 누르기 */
-var lpT=null,lpXY=null;
-function lpCancel(){clearTimeout(lpT);lpT=null}
-$("mark").addEventListener("pointerdown",function(e){lpXY=[e.clientX,e.clientY];lpCancel();lpT=setTimeout(function(){lpT=null;if(navigator.vibrate)try{navigator.vibrate(30)}catch(x){}if(ADMIN)openAdmin();else pinSheet()},2000)});
-$("mark").addEventListener("pointermove",function(e){if(lpXY&&Math.abs(e.clientX-lpXY[0])+Math.abs(e.clientY-lpXY[1])>12)lpCancel()});
-["pointerup","pointerleave","pointercancel"].forEach(function(t){$("mark").addEventListener(t,lpCancel)});
-$("mark").addEventListener("contextmenu",function(e){e.preventDefault()});
+/* 로고를 1.5초 꾹 누르기 (아이폰은 touch 이벤트로 처리) */
+var lpT=null,lpXY=null,mk=$("mark");
+function lpStart(x,y){lpXY=[x,y];clearTimeout(lpT);mk.classList.add("hold");
+  lpT=setTimeout(function(){lpT=null;mk.classList.remove("hold");if(navigator.vibrate)try{navigator.vibrate(30)}catch(e){}if(ADMIN)openAdmin();else pinSheet()},1500)}
+function lpCancel(){clearTimeout(lpT);lpT=null;mk.classList.remove("hold")}
+function lpMove(x,y){if(lpT&&lpXY&&Math.abs(x-lpXY[0])+Math.abs(y-lpXY[1])>14)lpCancel()}
+mk.addEventListener("touchstart",function(e){e.preventDefault();var t=e.touches[0];lpStart(t.clientX,t.clientY)},{passive:false});
+mk.addEventListener("touchmove",function(e){var t=e.touches[0];lpMove(t.clientX,t.clientY)},{passive:true});
+mk.addEventListener("touchend",lpCancel);mk.addEventListener("touchcancel",lpCancel);
+mk.addEventListener("mousedown",function(e){lpStart(e.clientX,e.clientY)});
+mk.addEventListener("mousemove",function(e){lpMove(e.clientX,e.clientY)});
+mk.addEventListener("mouseup",lpCancel);mk.addEventListener("mouseleave",lpCancel);
+mk.addEventListener("contextmenu",function(e){e.preventDefault()});
 $("adminBtn").onclick=openAdmin;
 function pinSheet(){var v="";
   sheet('<h3 style="text-align:center">Access Code</h3><p class="desc" style="text-align:center">4자리 코드를 입력하세요</p><div class="pinrow" id="pins"><i></i><i></i><i></i><i></i></div>'+
